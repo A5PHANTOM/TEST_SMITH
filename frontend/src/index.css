@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --color-accent: #8bff4a;
+}
+
+body {
+  background: #09090b;
+  color: #e4e4e7;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+pre, code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
