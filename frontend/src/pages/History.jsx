@@ -4,6 +4,7 @@ import { listRuns } from "../api/client";
 
 const statusColors = {
   pending: "text-yellow-400",
+  cloning: "text-blue-400",
   scanning: "text-blue-400",
   analyzing: "text-blue-400",
   done: "text-green-400",
@@ -43,7 +44,7 @@ export default function History() {
               </span>
             </div>
             <div className="text-xs text-zinc-500 mt-1">
-              {run.repo_path}
+              {run.repo_url || run.repo_path}
             </div>
           </Link>
         ))}

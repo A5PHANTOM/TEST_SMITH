@@ -12,6 +12,8 @@ class Run(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     repo_path = Column(String, nullable=False)
+    repo_url = Column(String, nullable=True)
+    clone_path = Column(String, nullable=True)
     status = Column(String, nullable=False, default="pending")
     analysis = Column(JSON, nullable=True)
     report = Column(Text, nullable=True)

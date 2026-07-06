@@ -45,8 +45,26 @@ export default function RunDetail() {
         </span>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded p-3 text-sm">
-        <span className="text-zinc-500">Repo Path:</span> {run.repo_path}
+      <div className="space-y-1">
+        {run.repo_url && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded p-3 text-sm">
+            <span className="text-zinc-500">GitHub:</span>{" "}
+            <a href={run.repo_url} target="_blank" rel="noreferrer" className="text-[#8bff4a] underline">
+              {run.repo_url}
+            </a>
+          </div>
+        )}
+        {run.clone_path && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded p-3 text-sm">
+            <span className="text-zinc-500">Cloned to:</span>{" "}
+            <span className="text-zinc-300 font-mono text-xs">{run.clone_path}</span>
+          </div>
+        )}
+        {!run.repo_url && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded p-3 text-sm">
+            <span className="text-zinc-500">Path:</span> {run.repo_path}
+          </div>
+        )}
       </div>
 
       <div>

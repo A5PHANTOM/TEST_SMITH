@@ -1,3 +1,4 @@
+import os, shutil
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,13 +10,14 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 
 
 class CreateRunRequest(BaseModel):
-    repo_path: str
-    target_files: list[str] = []
+    repo_path: str = ""
+    repo_url: str = ""
 
 
 class RunResponse(BaseModel):
     id: int
     repo_path: str
+    repo_url: str | None
     status: str
     created_at: str
     updated_at: str
@@ -25,6 +27,7 @@ class RunResponse(BaseModel):
         return cls(
             id=run.id,
             repo_path=run.repo_path,
+            repo_url=run.repo_url,
             status=run.status,
             created_at=run.created_at.isoformat(),
             updated_at=run.updated_at.isoformat(),
@@ -33,8 +36,11 @@ class RunResponse(BaseModel):
 
 @router.post("")
 async def create_run(body: CreateRunRequest, db: AsyncSession = Depends(get_db)):
+    if not body.repo_path and not body.repo_url:
+        raise HTTPException(400, "Provide either repo_path or repo_url")
     run = Run(
-        repo_path=body.repo_path,
+        repo_path=body.repo_path or body.repo_url,
+        repo_url=body.repo_url or None,
         status="pending",
     )
     db.add(run)
@@ -59,6 +65,8 @@ async def get_run(run_id: int, db: AsyncSession = Depends(get_db)):
     return {
         "id": run.id,
         "repo_path": run.repo_path,
+        "repo_url": run.repo_url,
+        "clone_path": run.clone_path,
         "status": run.status,
         "analysis": run.analysis,
         "report": run.report,
@@ -74,6 +82,8 @@ async def dismiss_run(run_id: int, db: AsyncSession = Depends(get_db)):
     run = result.scalar_one_or_none()
     if not run:
         raise HTTPException(404, "Run not found")
+    if run.clone_path:
+        shutil.rmtree(run.clone_path, ignore_errors=True)
     run.status = "dismissed"
     await db.commit()
     return {"status": "dismissed"}

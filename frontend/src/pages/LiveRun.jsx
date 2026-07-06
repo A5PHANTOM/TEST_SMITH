@@ -49,7 +49,16 @@ export default function LiveRun() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-zinc-900 border border-zinc-800 rounded p-3 text-xs text-zinc-400">
+        {run.repo_url ? (
+          <><span className="text-zinc-500">Repo:</span> {run.repo_url}</>
+        ) : (
+          <><span className="text-zinc-500">Path:</span> {run.repo_path}</>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <AgentStatus name="Clone" data={lastAgentEvent("clone")} />
         <AgentStatus name="Scanner" data={lastAgentEvent("scanner")} />
         <AgentStatus name="Analyzer" data={lastAgentEvent("analyzer")} />
       </div>
