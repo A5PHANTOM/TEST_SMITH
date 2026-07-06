@@ -36,10 +36,12 @@ export default function RunDetail() {
   if (error) return <p className="text-red-400">Error: {error}</p>;
   if (!run) return <p className="text-zinc-500">Loading...</p>;
 
+  const exec = run.execution_results || {};
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Run #{run.id} — Report</h1>
+        <h1 className="text-2xl font-bold">Run #{run.id}</h1>
         <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-1 rounded">
           Status: {run.status}
         </span>
@@ -64,6 +66,32 @@ export default function RunDetail() {
           <div className="bg-zinc-900 border border-zinc-800 rounded p-3 text-sm">
             <span className="text-zinc-500">Path:</span> {run.repo_path}
           </div>
+        )}
+      </div>
+
+      <div className="border border-zinc-800 rounded p-4">
+        <h2 className="text-lg font-semibold mb-3">Test Results</h2>
+        <div className="flex gap-4 text-sm mb-3">
+          <span className="text-green-400">{exec.pass_count ?? 0} passed</span>
+          {exec.fail_count > 0 && <span className="text-red-400">{exec.fail_count} failed</span>}
+          {exec.error_count > 0 && <span className="text-yellow-400">{exec.error_count} errors</span>}
+          {exec.skip_count > 0 && <span className="text-zinc-500">{exec.skip_count} skipped</span>}
+          <span className="text-zinc-500">
+            {(exec.pass_count || 0) + (exec.fail_count || 0) + (exec.error_count || 0) + (exec.skip_count || 0)} total
+          </span>
+        </div>
+        {exec.failures?.length > 0 && (
+          <div className="text-xs text-red-400 space-y-1 max-h-32 overflow-auto mb-3">
+            {exec.failures.map((f, i) => <div key={i}>{f}</div>)}
+          </div>
+        )}
+        {exec.output_log && (
+          <details>
+            <summary className="text-xs text-zinc-500 cursor-pointer">Output Log</summary>
+            <pre className="bg-zinc-900 border border-zinc-800 rounded p-3 text-xs overflow-auto max-h-48 mt-2">
+              {exec.output_log}
+            </pre>
+          </details>
         )}
       </div>
 

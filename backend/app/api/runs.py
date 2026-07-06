@@ -69,6 +69,7 @@ async def get_run(run_id: int, db: AsyncSession = Depends(get_db)):
         "clone_path": run.clone_path,
         "status": run.status,
         "analysis": run.analysis,
+        "execution_results": run.execution_results,
         "report": run.report,
         "transcript": run.transcript,
         "created_at": run.created_at.isoformat(),

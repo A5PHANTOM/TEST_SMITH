@@ -23,9 +23,14 @@ async def run_scanner(repo_path: str, target_files: list[str], emit):
 
     source_count = 0
     test_count = 0
+    has_py_tests = False
+    has_js_tests = False
 
     for root, dirs, files in os.walk(repo_path):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+
+        if os.path.basename(root) == "tests":
+            has_py_tests = any(f.endswith(".py") for f in files)
 
         for f in files:
             ext = os.path.splitext(f)[1]
@@ -36,6 +41,11 @@ async def run_scanner(repo_path: str, target_files: list[str], emit):
             full_path = os.path.join(root, f)
             is_test = "test" in f.lower() or "spec" in f.lower()
             key = "test_files" if is_test else "source_files"
+
+            if is_test and ext == ".py":
+                has_py_tests = True
+            if is_test and ext in (".js", ".jsx", ".ts", ".tsx"):
+                has_js_tests = True
 
             analysis[key].append({
                 "path": rel_path,
@@ -54,16 +64,18 @@ async def run_scanner(repo_path: str, target_files: list[str], emit):
             if pkg_rel not in analysis["dependency_graph"]:
                 analysis["dependency_graph"][pkg_rel] = []
 
-    if os.path.isfile(os.path.join(repo_path, "package.json")):
+    if has_py_tests:
+        analysis["project_type"] = "python"
+    elif has_js_tests:
         analysis["project_type"] = "node"
-    elif os.path.isfile(os.path.join(repo_path, "pyproject.toml")):
-        analysis["project_type"] = "python"
-    elif os.path.isfile(os.path.join(repo_path, "requirements.txt")):
-        analysis["project_type"] = "python"
-    elif os.path.isfile(os.path.join(repo_path, "Cargo.toml")):
-        analysis["project_type"] = "rust"
-    elif os.path.isfile(os.path.join(repo_path, "go.mod")):
-        analysis["project_type"] = "go"
+    else:
+        for root, dirs, files in os.walk(repo_path):
+            if "requirements.txt" in files or "pyproject.toml" in files or "setup.py" in files:
+                analysis["project_type"] = "python"
+                break
+            if "package.json" in files:
+                analysis["project_type"] = "node"
+                break
 
     await emit({"event": "agent_status", "agent": "scanner", "status": "done",
                 "detail": f"Found {source_count} source files, {test_count} test files"})

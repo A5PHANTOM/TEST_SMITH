@@ -2,6 +2,7 @@ import os, shutil, subprocess, tempfile, re
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.run import Run
 from app.orchestrator.scanner import run_scanner
+from app.orchestrator.runner import run_runner
 from app.orchestrator.reporter import run_reporter
 
 
@@ -66,6 +67,13 @@ async def run_pipeline(run: Run, db: AsyncSession, emit):
 
     analysis = await run_scanner(run.repo_path, [], emit)
     run.analysis = analysis
+
+    run.status = "running"
+    await db.commit()
+    await emit({"event": "agent_status", "agent": "runner", "status": "idle", "detail": ""})
+
+    execution_results = await run_runner(run.repo_path, analysis, emit)
+    run.execution_results = execution_results
 
     run.status = "analyzing"
     await db.commit()

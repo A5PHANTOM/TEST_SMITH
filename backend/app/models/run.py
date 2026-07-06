@@ -16,6 +16,7 @@ class Run(Base):
     clone_path = Column(String, nullable=True)
     status = Column(String, nullable=False, default="pending")
     analysis = Column(JSON, nullable=True)
+    execution_results = Column(JSON, nullable=True)
     report = Column(Text, nullable=True)
     transcript = Column(JSON, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)

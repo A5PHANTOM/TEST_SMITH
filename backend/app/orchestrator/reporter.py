@@ -21,16 +21,36 @@ async def run_reporter(analysis: dict, repo_path: str, emit):
     return report
 
 
+def _test_stem(filepath: str) -> str:
+    name = os.path.basename(filepath)
+    name = os.path.splitext(name)[0]
+    if name.startswith("test_"):
+        name = name[5:]
+    elif name.endswith("_test"):
+        name = name[:-5]
+    elif name.endswith(".test"):
+        name = name[:-5]
+    if name.endswith("_spec"):
+        name = name[:-5]
+    if name.startswith("spec_"):
+        name = name[5:]
+    return name.lower()
+
+
+def _source_stem(filepath: str) -> str:
+    return os.path.splitext(os.path.basename(filepath))[0].lower()
+
+
 def _coverate_overview(analysis: dict) -> str:
     source_files = analysis.get("source_files", [])
     test_files = analysis.get("test_files", [])
-    test_names = {os.path.splitext(f["path"])[0].replace("test_", "").replace("_", "") for f in test_files}
+    test_stems = {_test_stem(f["path"]) for f in test_files}
 
     covered = []
     uncovered = []
     for sf in source_files:
-        base = os.path.splitext(sf["path"])[0].replace("_", "")
-        if any(base in tn or tn in base for tn in test_names):
+        stem = _source_stem(sf["path"])
+        if stem in test_stems:
             covered.append(sf["path"])
         else:
             uncovered.append(sf["path"])
@@ -106,6 +126,7 @@ def _dependency_analysis(analysis: dict) -> str:
 def _testability_analysis(analysis: dict, repo_path: str) -> str:
     source_files = analysis.get("source_files", [])
     concerns = []
+    seen = set()
 
     for sf in source_files:
         if sf.get("language") != "py":
@@ -121,10 +142,16 @@ def _testability_analysis(analysis: dict, repo_path: str) -> str:
             for node in ast.walk(tree):
                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                     if getattr(node.func, 'attr', '') in ('connect', 'request', 'run', 'start'):
-                        concerns.append(f"- `{sf['path']}`: network call detected (`{node.func.attr}`) — may need mocking")
+                        key = (sf["path"], node.func.attr)
+                        if key not in seen:
+                            seen.add(key)
+                            concerns.append(f"- `{sf['path']}`: network call detected (`{node.func.attr}`) — may need mocking")
                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
                     if node.func.id == 'open':
-                        concerns.append(f"- `{sf['path']}`: file I/O (`open()`) — consider using tmp_path or mocks")
+                        key = (sf["path"], "open")
+                        if key not in seen:
+                            seen.add(key)
+                            concerns.append(f"- `{sf['path']}`: file I/O (`open()`) — consider using tmp_path or mocks")
 
         except (SyntaxError, OSError):
             pass
@@ -150,10 +177,10 @@ def _recommendations(analysis: dict) -> str:
         return "\n".join(lines)
 
     uncovered = 0
-    test_names = {os.path.splitext(f["path"])[0].replace("test_", "").replace("_", "") for f in test_files}
+    test_stems = {_test_stem(f["path"]) for f in test_files}
     for sf in source_files:
-        base = os.path.splitext(sf["path"])[0].replace("_", "")
-        if not any(base in tn or tn in base for tn in test_names):
+        stem = _source_stem(sf["path"])
+        if stem not in test_stems:
             uncovered += 1
             lines.append(f"- **High priority**: Write tests for `{sf['path']}`")
 

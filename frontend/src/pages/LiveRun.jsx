@@ -32,6 +32,10 @@ export default function LiveRun() {
   const lastAgentEvent = (agent) =>
     events.filter((e) => e.event === "agent_status" && e.agent === agent).pop();
 
+  const lastTestResult = events.filter((e) => e.event === "test_result").pop();
+  const runnerEvent = lastAgentEvent("runner");
+  const runnerWorking = runnerEvent?.status === "working";
+
   if (runError) {
     return <p className="text-red-400">Error: {runError}</p>;
   }
@@ -57,20 +61,43 @@ export default function LiveRun() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <AgentStatus name="Clone" data={lastAgentEvent("clone")} />
         <AgentStatus name="Scanner" data={lastAgentEvent("scanner")} />
+        <AgentStatus name="Runner" data={lastAgentEvent("runner")} />
         <AgentStatus name="Analyzer" data={lastAgentEvent("analyzer")} />
       </div>
 
+      {runnerWorking && !lastTestResult && (
+        <div className="border border-zinc-800 rounded p-4 flex items-center gap-3">
+          <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-zinc-400">Running test suite...</span>
+        </div>
+      )}
+
+      {lastTestResult && (
+        <div className="border border-zinc-800 rounded p-4">
+          <h3 className="text-sm font-semibold mb-3">Test Results</h3>
+          <div className="flex gap-4 text-sm">
+            <span className="text-green-400">{lastTestResult.pass_count} passed</span>
+            {lastTestResult.fail_count > 0 && <span className="text-red-400">{lastTestResult.fail_count} failed</span>}
+            {lastTestResult.error_count > 0 && <span className="text-yellow-400">{lastTestResult.error_count} errors</span>}
+            {lastTestResult.skip_count > 0 && <span className="text-zinc-500">{lastTestResult.skip_count} skipped</span>}
+            <span className="text-zinc-500">
+              {lastTestResult.pass_count + lastTestResult.fail_count + lastTestResult.error_count + lastTestResult.skip_count} total
+            </span>
+          </div>
+        </div>
+      )}
+
       {done && (
         <div className="border border-zinc-700 rounded p-4 text-center space-y-3">
-          <p className="text-lg font-semibold text-green-400">Diagnostic Complete</p>
+          <p className="text-lg font-semibold text-green-400">Complete</p>
           <button
             onClick={() => navigate(`/runs/${id}/detail`)}
             className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded px-4 py-2 text-sm"
           >
-            View Report
+            View Full Results
           </button>
         </div>
       )}
