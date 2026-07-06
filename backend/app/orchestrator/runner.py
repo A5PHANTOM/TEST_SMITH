@@ -22,9 +22,9 @@ async def run_runner(repo_path: str, analysis: dict, emit):
 
     try:
         _copy_to_sandbox(repo_path, sandbox)
-        _install_deps(sandbox, analysis, result)
+        _install_deps(sandbox, result)
 
-        cmd = _detect_test_command(sandbox, analysis)
+        cmd = _detect_test_command(sandbox)
         if not cmd:
             result["output_log"] = "No test framework detected"
             await emit({"event": "agent_status", "agent": "runner", "status": "done", "detail": "No tests found to run"})
@@ -66,29 +66,43 @@ def _copy_to_sandbox(repo_path: str, sandbox: str):
             shutil.copy2(src, dst)
 
 
-def _install_deps(sandbox: str, analysis: dict, result: dict):
+def _find_file_in_subdirs(sandbox: str, filename: str) -> str | None:
+    for root, dirs, files in os.walk(sandbox):
+        for d in list(dirs):
+            if d in (".git", "__pycache__", "node_modules", ".venv", "venv"):
+                dirs.remove(d)
+        if filename in files:
+            return os.path.join(root, filename)
+    return None
+
+
+def _install_deps(sandbox: str, result: dict):
     try:
-        if os.path.isfile(os.path.join(sandbox, "requirements.txt")):
-            subprocess.run(["pip", "install", "-r", "requirements.txt"],
+        req_txt = _find_file_in_subdirs(sandbox, "requirements.txt")
+        if req_txt:
+            subprocess.run(["pip", "install", "-r", req_txt],
                            cwd=sandbox, capture_output=True, text=True, timeout=120)
-        elif os.path.isfile(os.path.join(sandbox, "pyproject.toml")):
-            subprocess.run(["pip", "install", "-e", "."],
-                           cwd=sandbox, capture_output=True, text=True, timeout=120)
-        if os.path.isfile(os.path.join(sandbox, "package.json")):
+        else:
+            pyproject = _find_file_in_subdirs(sandbox, "pyproject.toml")
+            if pyproject:
+                subprocess.run(["pip", "install", "-e", "."],
+                               cwd=sandbox, capture_output=True, text=True, timeout=120)
+        if _find_file_in_subdirs(sandbox, "package.json"):
             subprocess.run(["npm", "install"], cwd=sandbox, capture_output=True, text=True, timeout=120)
     except subprocess.TimeoutExpired:
         result["output_log"] += "\n[Dependency installation timed out]"
 
 
-def _detect_test_command(sandbox: str, analysis: dict) -> list[str] | None:
+def _detect_test_command(sandbox: str) -> list[str] | None:
     for root, dirs, files in os.walk(sandbox):
-        dirs[:] = [d for d in dirs if d in ("tests", "test", "__tests__", "spec") or d.startswith("tests")]
+        for d in list(dirs):
+            if d in (".git", "__pycache__", "node_modules", ".venv", "venv"):
+                dirs.remove(d)
         for f in files:
-            if re.search(r"test_.*\.py$|.*_test\.py$|.*test\.(js|jsx|ts|tsx)$", f):
-                if f.endswith(".py"):
-                    return ["python", "-m", "pytest", sandbox, "-v", "--tb=short"]
-                else:
-                    return ["npx", "vitest", "run", "--reporter=verbose"]
+            if re.search(r"test_.*\.py$|.*_test\.py$", f):
+                return ["python", "-m", "pytest", sandbox, "-v", "--tb=short"]
+            if re.search(r".*\.(test|spec)\.(js|jsx|ts|tsx)$", f):
+                return ["npx", "vitest", "run", "--reporter=verbose"]
     return None
 
 

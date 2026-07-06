@@ -29,9 +29,6 @@ async def run_scanner(repo_path: str, target_files: list[str], emit):
     for root, dirs, files in os.walk(repo_path):
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
 
-        if os.path.basename(root) == "tests":
-            has_py_tests = any(f.endswith(".py") for f in files)
-
         for f in files:
             ext = os.path.splitext(f)[1]
             if ext not in SRC_EXTS:
