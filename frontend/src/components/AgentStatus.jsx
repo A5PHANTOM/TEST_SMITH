@@ -1,30 +1,37 @@
-const statusColors = {
-  idle: "bg-zinc-800 border-zinc-700 text-zinc-400",
-  working: "bg-blue-900 border-blue-700 text-blue-200 animate-pulse",
-  done: "bg-green-900 border-green-700 text-green-200",
+const statusConfig = {
+  idle: {
+    dot: "bg-slate-600",
+    border: "border-white/[0.06]",
+    bg: "bg-white/[0.03]",
+    text: "text-slate-400",
+  },
+  working: {
+    dot: "bg-blue-400 animate-ping",
+    border: "border-blue-500/30",
+    bg: "bg-blue-500/10",
+    text: "text-blue-300",
+  },
+  done: {
+    dot: "bg-teal-400",
+    border: "border-teal-500/30",
+    bg: "bg-teal-500/10",
+    text: "text-teal-300",
+  },
 };
 
 export default function AgentStatus({ name, data }) {
   const status = data?.status || "idle";
   const detail = data?.detail || "";
-  const colors = statusColors[status] || statusColors.idle;
+  const cfg = statusConfig[status] || statusConfig.idle;
 
   return (
-    <div className={`border rounded p-3 text-sm ${colors}`}>
+    <div className={`rounded-xl p-3 text-sm border ${cfg.bg} ${cfg.border}`}>
       <div className="flex items-center gap-2">
-        {status === "working" && (
-          <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-ping" />
-        )}
-        {status === "done" && (
-          <span className="inline-block w-2 h-2 rounded-full bg-green-400" />
-        )}
-        {status === "idle" && (
-          <span className="inline-block w-2 h-2 rounded-full bg-zinc-600" />
-        )}
-        <div className="font-semibold">{name}</div>
+        <span className={`inline-block w-2 h-2 rounded-full ${cfg.dot}`} />
+        <div className="font-semibold text-slate-200">{name}</div>
       </div>
-      <div className="capitalize text-xs mt-1">{status}</div>
-      {detail && <div className="text-xs mt-1 opacity-70">{detail}</div>}
+      <div className={`capitalize text-xs mt-1 ${cfg.text}`}>{status}</div>
+      {detail && <div className="text-xs mt-1 text-slate-500">{detail}</div>}
     </div>
   );
 }
