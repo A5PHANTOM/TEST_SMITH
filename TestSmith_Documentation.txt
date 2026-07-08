@@ -1,0 +1,251 @@
+============================================================
+  TESTSMITH — DIAGNOSTIC REPORTING AGENT
+============================================================
+  Generated: 2026-07-07
+
+────────────────────────────────────────────────────────────
+1. WHAT IS TESTSMITH?
+────────────────────────────────────────────────────────────
+
+  TestSmith scans any codebase, runs its existing tests, and produces a
+  structured diagnostic report that identifies coverage gaps, dependency
+  issues, and testability concerns. It is a read-only diagnostic tool —
+  it NEVER writes test files or modifies your code.
+
+  Stack:
+    Backend : FastAPI (async) + SQLAlchemy + SQLite
+    Frontend: React 19 + Vite 6 + Tailwind CSS 4
+    Tests   : pytest + httpx (10 tests)
+
+────────────────────────────────────────────────────────────
+2. ARCHITECTURE (3 Agents + Orchestrator)
+────────────────────────────────────────────────────────────
+
+  +----------+     +----------+     +----------+
+  | SCANNER  | --> |  RUNNER  | --> | ANALYZER |
+  +----------+     +----------+     +----------+
+       |                |                |
+       v                v                v
+   walks repo       runs tests      AST analysis
+   finds files      parses output   markdown report
+
+  Agent       What it does
+  ───────     ─────────────────────────────────────────────
+  Scanner     Walks the repository, finds source & test files by
+              extension (.py, .js, .jsx, .ts, .tsx, .go, .rs,
+              .java, .rb, .php). Detects project type (Python/Node).
+
+  Runner      Copies repo to a temp sandbox, installs dependencies
+              (pip install / npm install), runs pytest or vitest,
+              and parses output for pass/fail/error/skip counts.
+
+  Analyzer    Parses Python source files via AST to extract
+              functions, classes, imports. Detects testability
+              concerns (network calls, file I/O). Generates a
+              markdown diagnostic report with 5 sections.
+
+  Orchestrator (loop.py) runs them sequentially and streams
+  real-time status updates via WebSocket to the frontend.
+
+────────────────────────────────────────────────────────────
+3. HOW IT WORKS (End-to-End Flow)
+────────────────────────────────────────────────────────────
+
+  1. User submits a local repo path OR a GitHub URL
+     (e.g. https://github.com/user/repo.git)
+  2. If GitHub URL: shallow clone (--depth=1) to temp directory
+  3. Path validated against REPO_ROOT_WHITELIST
+  4. Scanner walks the repo -> produces analysis.json
+  5. Runner copies to sandbox, installs deps, runs tests
+  6. Analyzer reads source files, runs AST analysis
+  7. Final markdown report stored in the database
+  8. All events stream in real-time via WebSocket to the browser
+
+  Status lifecycle: pending -> cloning -> scanning -> running
+                    -> analyzing -> done
+                                    -> dismissed (user action)
+
+────────────────────────────────────────────────────────────
+4. QUICK SETUP
+────────────────────────────────────────────────────────────
+
+  Prerequisites: Python 3.12+, Node.js 20+
+
+  Backend:
+    cd backend
+    python3 -m venv venv && source venv/bin/activate
+    pip install -r requirements.txt
+    cp .env.example .env   (or create .env with your settings)
+    uvicorn app.main:app --reload --port 8001
+
+  Frontend:
+    cd frontend
+    npm install
+    npm run dev
+
+  Open http://localhost:5173 in your browser.
+
+────────────────────────────────────────────────────────────
+5. FILE LAYOUT (Annotated)
+────────────────────────────────────────────────────────────
+
+  backend/
+    .env                         Environment variables (gitignored)
+    requirements.txt             Python dependencies
+    pyproject.toml               pytest config
+    app/
+      main.py                    FastAPI app, CORS, lifespan
+      db.py                      SQLAlchemy async engine + session
+      models/run.py              Run ORM model (DB schema)
+      api/runs.py                REST: create/list/view/dismiss runs
+      api/ws.py                  WebSocket for live streaming
+      orchestrator/
+        loop.py                  Pipeline orchestrator
+        scanner.py               Walks repo, finds files
+        runner.py                Runs tests in temp sandbox
+        reporter.py              AST analysis, markdown report
+        prompts/                 System prompt templates
+      mcp_server/tools.py        Standalone MCP tools
+    tests/                       pytest test suite (10 tests)
+
+  frontend/
+    package.json                 Node dependencies
+    vite.config.js               Vite config + proxy
+    index.html                   HTML entry point
+    src/
+      main.jsx                   React entry (StrictMode + Router)
+      App.jsx                    Root: nav header + route defs
+      api/client.js              REST API wrapper (fetch)
+      hooks/useRunSocket.js      WebSocket hook
+      components/
+        AgentStatus.jsx          Status card (idle/working/done)
+        LiveFeed.jsx             Event log display
+      pages/
+        NewRun.jsx               Start a diagnostic run
+        LiveRun.jsx              Real-time dashboard
+        RunDetail.jsx            View report + download/dismiss
+        History.jsx              Past runs list
+
+────────────────────────────────────────────────────────────
+6. API ENDPOINTS
+────────────────────────────────────────────────────────────
+
+  REST (all under /api)
+
+  Method  Path                          Description
+  ──────  ────────────────────────────  ─────────────────────
+  GET     /health                       Health check
+  POST    /runs                         Create a new run
+  GET     /runs                         List all past runs
+  GET     /runs/{id}                    Get run details
+  POST    /runs/{id}/dismiss            Dismiss + cleanup
+
+  Create Run request body:
+    {"repo_path": "/local/path"}  or  {"repo_url": "https://..."}
+
+  List Runs response:
+    [{id, repo_path, repo_url, status, created_at, updated_at}]
+
+  Get Run response includes all fields:
+    analysis, execution_results, report (markdown)
+
+  WebSocket
+
+  Path:    /ws/runs/{run_id}
+  Events (server -> client):
+
+    agent_status  → {agent, status, detail}
+    test_result   → {pass_count, fail_count, error_count, skip}
+    report_ready  → {report: '...markdown...'}
+    run_complete  → {run_id}
+    error         → {detail}
+
+────────────────────────────────────────────────────────────
+7. FRONTEND ROUTES
+────────────────────────────────────────────────────────────
+
+  Path               Page          What it does
+  ────────────────   ─────────    ───────────────────────
+  /                  NewRun        Submit repo path or
+                                   GitHub URL to scan
+  /runs/:id          LiveRun       Real-time streaming with
+                                   agent status cards + log
+  /runs/:id/detail   RunDetail     View report, download .md,
+                                   dismiss run
+  /history           History       List of all past runs
+
+  Navigation: header bar with 'New Run' and 'History' links.
+  Dark theme (bg-zinc-950, accent #8bff4a neon green).
+  Monospace font throughout.
+
+────────────────────────────────────────────────────────────
+8. CONFIGURATION (.env)
+────────────────────────────────────────────────────────────
+
+  Variable                Default                       Description
+  ────────                ───────                       ───────────
+  OPENCODE_API_KEY        (empty)                       Key for OpenCode API
+  MODEL                   deepseek-v4                   Model name
+  DB_URL                  sqlite+aiosqlite:///./        SQLite database URL
+                          testsmith.db
+  REPO_ROOT_WHITELIST     *                             Allowed repo roots
+                                                         (comma-separated, * = any)
+  TEST_TIMEOUT_SECONDS    300                           Test execution timeout
+
+────────────────────────────────────────────────────────────
+9. SAFETY & ARCHITECTURAL RULES
+────────────────────────────────────────────────────────────
+
+  Non-Negotiable Rules:
+  • Scanner reports only what is observed — no guessing
+  • Analyzer produces reports from actual AST analysis — no invented findings
+  • No test files are generated or written to disk — diagnostic-only
+  • Report writing only through the API — never writes to the target repo
+  • Prompt templates in prompts/ directory — never inlined in code
+
+  Safety Measures:
+  • Repo path validated against whitelist — rejects path traversal (../)
+  • Source file reads capped at 100KB
+  • AST analysis is read-only — never modifies files
+  • Git clone uses --depth=1 (shallow, fast)
+  • Test sandbox cleaned up automatically (shutil.rmtree)
+  • .env gitignored — secrets never committed
+  • Cloned repos cleaned up on dismiss/reject
+
+────────────────────────────────────────────────────────────
+10. DATABASE MODEL (Run)
+────────────────────────────────────────────────────────────
+
+  Field              Type      Description
+  ──────────────     ──────    ─────────────────────────────
+  id                 int       Primary key (auto-increment)
+  repo_path          str       Local path or clone path
+  repo_url           str?      Original GitHub URL (if cloned)
+  clone_path         str?      Temp dir for cloned repo
+  status             str       pending/cloning/scanning/
+                               running/analyzing/done/
+                               dismissed/rejected
+  analysis           JSON      Scanner output
+  execution_results  JSON      Runner output
+  report             Text      Analyzer markdown report
+  transcript         JSON?     Agent conversation log
+  created_at         datetime  Creation timestamp
+  updated_at         datetime  Last update timestamp
+
+────────────────────────────────────────────────────────────
+11. TEST SUITE
+────────────────────────────────────────────────────────────
+
+  Run:  cd backend && source venv/bin/activate && pytest -v
+
+  File                Tests
+  ────────────────    ─────────────────────────────────────
+  test_loop.py        Path validation (allowed, blocked, traversal)
+  test_scanner.py     Empty dir, Python project detection
+  test_reporter.py    Empty analysis, report with files
+  test_runner.py      Runner with no project type
+  test_ws.py          Health check, list runs
+
+============================================================
+  End of Document
+============================================================

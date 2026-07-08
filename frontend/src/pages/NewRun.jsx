@@ -30,21 +30,30 @@ export default function NewRun() {
 
   return (
     <div className="max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">New Diagnostic Run</h1>
+      <h1 className="text-2xl font-bold mb-2 text-slate-100">New Diagnostic Run</h1>
+      <p className="text-sm text-slate-500 mb-8">Scan a repository and generate a test readiness report.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="flex gap-2 bg-zinc-900 rounded p-1 border border-zinc-800 w-fit">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="glass p-1 w-fit flex">
           <button
             type="button"
             onClick={() => setMode("local")}
-            className={`px-4 py-1.5 text-sm rounded ${mode === "local" ? "bg-[#8bff4a] text-black" : "text-zinc-400 hover:text-zinc-200"}`}
+            className={`px-4 py-1.5 text-sm rounded-lg transition-all ${
+              mode === "local"
+                ? "bg-teal-500 text-white shadow-[0_0_12px_-4px_rgba(20,184,166,0.5)]"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
           >
             Local Path
           </button>
           <button
             type="button"
             onClick={() => setMode("github")}
-            className={`px-4 py-1.5 text-sm rounded ${mode === "github" ? "bg-[#8bff4a] text-black" : "text-zinc-400 hover:text-zinc-200"}`}
+            className={`px-4 py-1.5 text-sm rounded-lg transition-all ${
+              mode === "github"
+                ? "bg-teal-500 text-white shadow-[0_0_12px_-4px_rgba(20,184,166,0.5)]"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
           >
             GitHub URL
           </button>
@@ -52,25 +61,25 @@ export default function NewRun() {
 
         {mode === "local" ? (
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">Repository Path</label>
+            <label className="block text-sm text-slate-400 mb-1.5">Repository Path</label>
             <input
               type="text"
               value={repoPath}
               onChange={(e) => setRepoPath(e.target.value)}
               placeholder="/path/to/project"
-              className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#8bff4a]"
+              className="input-glass w-full px-3 py-2.5 text-sm placeholder-slate-600"
               required={mode === "local"}
             />
           </div>
         ) : (
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">GitHub Repository URL</label>
+            <label className="block text-sm text-slate-400 mb-1.5">GitHub Repository URL</label>
             <input
               type="url"
               value={repoUrl}
               onChange={(e) => setRepoUrl(e.target.value)}
               placeholder="https://github.com/user/repo"
-              className="w-full bg-zinc-900 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-[#8bff4a]"
+              className="input-glass w-full px-3 py-2.5 text-sm placeholder-slate-600"
               required={mode === "github"}
             />
           </div>
@@ -81,7 +90,7 @@ export default function NewRun() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#8bff4a] text-black font-semibold rounded px-4 py-2 text-sm hover:bg-[#7ae63e] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-teal-500 hover:bg-teal-400 text-white font-semibold rounded-lg px-4 py-2.5 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_-8px_rgba(20,184,166,0.4)] hover:shadow-[0_0_24px_-6px_rgba(20,184,166,0.6)]"
         >
           {loading ? "Starting..." : "Run Diagnostic"}
         </button>

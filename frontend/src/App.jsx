@@ -7,16 +7,16 @@ import History from "./pages/History";
 export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-zinc-800 px-6 py-4">
+      <header className="glass rounded-none border-x-0 border-t-0 mx-0 px-6 py-4">
         <nav className="max-w-6xl mx-auto flex items-center justify-between">
-          <NavLink to="/" className="text-lg font-bold tracking-tight text-zinc-100 no-underline">
+          <NavLink to="/" className="text-lg font-bold tracking-tight text-slate-100 no-underline hover:text-teal-400 transition-colors">
             TestSmith
           </NavLink>
           <div className="flex gap-6 text-sm">
-            <NavLink to="/" end className={({ isActive }) => isActive ? "text-[#8bff4a]" : "text-zinc-400 hover:text-zinc-200"}>
+            <NavLink to="/" end className={({ isActive }) => isActive ? "text-teal-400" : "text-slate-400 hover:text-slate-200 transition-colors"}>
               New Run
             </NavLink>
-            <NavLink to="/history" className={({ isActive }) => isActive ? "text-[#8bff4a]" : "text-zinc-400 hover:text-zinc-200"}>
+            <NavLink to="/history" className={({ isActive }) => isActive ? "text-teal-400" : "text-slate-400 hover:text-slate-200 transition-colors"}>
               History
             </NavLink>
           </div>
